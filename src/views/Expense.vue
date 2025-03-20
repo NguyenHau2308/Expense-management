@@ -42,9 +42,7 @@
             <td class="px-3 py-2">{{ day.comNuoc }}</td>
             <td class="px-3 py-2">{{ day.taiKhoan }}</td>
             <td class="px-3 py-2">{{ day.latVat }}</td>
-            <td class="px-3 py-2 font-semibold">
-              {{ day.tong }}
-            </td>
+            <td class="px-3 py-2 font-semibold">{{ day.tong }}</td>
             <td class="px-3 py-2 text-center space-x-2">
               <!-- Nút sửa -->
               <button class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded" @click="editDay(index)">
@@ -138,36 +136,14 @@
 </template>
 
 <script>
+import expenseService from '@/services/expense/expense.services.js'
+
 export default {
   name: 'WeeklyExpenseTable',
   data() {
     return {
-      weekInfo: {
-        number: 45,
-        startDate: '10/03',
-        endDate: '16/03',
-      },
-      dailyExpenses: [
-        {
-          dayLabel: 'T2',
-          xangXe: 46,
-          tatYeu: '',
-          comNuoc: 83,
-          taiKhoan: 100,
-          latVat: '',
-          tong: 229,
-        },
-        {
-          dayLabel: 'T3',
-          xangXe: '',
-          tatYeu: 15,
-          comNuoc: '',
-          taiKhoan: 155,
-          latVat: 46,
-          tong: 216,
-        },
-        // ... T4, T5, T6, T7, CN ...
-      ],
+      weekInfo: { number: 45, startDate: '10/03', endDate: '16/03' },
+      dailyExpenses: [],
       descriptions: ['Thuốc nhuộm: 46', 'Bánh canh lóc: 100', 'Cà phê sữa: 15', 'Ổ điện: 85'],
       summary: {
         choNo: 0,
@@ -183,17 +159,43 @@ export default {
       },
     }
   },
+  async mounted() {
+    // Gọi API khi component load
+    this.fetchExpenses()
+  },
   methods: {
+    async fetchExpenses() {
+      try {
+        const response = await expenseService.getList()
+        // Ở đây response.data có thể là một mảng (ví dụ [{id, code, name, ...}, ...])
+        // => transform sang dailyExpenses
+        this.dailyExpenses = this.transformExpenses(response.data)
+      } catch (error) {
+        console.error('Lỗi khi fetch expenses:', error)
+      }
+    },
+    transformExpenses(apiData) {
+      // Tạm ví dụ: ta muốn xăngXe, cơmNước... dựa vào "category"
+      // Chỗ này bạn tuỳ biến logic cũ -> if (category = "Xăng-Xe") => xangXe = amount ...
+      return apiData.map((item, idx) => ({
+        dayLabel: 'T' + (idx + 2), // Tuỳ, demo T2, T3
+        xangXe: item.category === 'Xăng-Xe' ? item.amount : '',
+        tatYeu: item.category === 'Tất Yếu' ? item.amount : '',
+        comNuoc: item.category === 'Cơm/Nước' ? item.amount : '',
+        taiKhoan: item.category === 'Tài Khoản' ? item.amount : '',
+        latVat: item.category === 'Lặt Vặt' ? item.amount : '',
+        tong: item.amount,
+      }))
+    },
     addDay() {
-      // Gọi form/thao tác thêm mới.
       alert('Mở form thêm Expense (chưa triển khai)')
     },
     editDay(index) {
-      // Gọi form/thao tác sửa row dailyExpenses[index].
       alert(`Edit row ${index} (chưa triển khai)`)
     },
-    deleteDay(index) {
-      // Xóa row dailyExpenses[index].
+    async deleteDay(index) {
+      // Hiện tại day không có ID => Tùy logic
+      // if day có id => expenseService.delete({ id: day.id })
       const confirmDelete = confirm('Bạn có chắc muốn xoá?')
       if (confirmDelete) {
         this.dailyExpenses.splice(index, 1)
@@ -202,7 +204,3 @@ export default {
   },
 }
 </script>
-
-<style scoped>
-/* Tuỳ chỉnh CSS thêm nếu muốn */
-</style>
